@@ -4,6 +4,7 @@ import { getStoredCookie, getStoredUsername, storeCookie, clearSession } from ".
 import { stripHtml, timeAgo, extractDomain } from "./ui/utils.ts";
 import type { FeedType } from "./ui/types.ts";
 
+const VERSION = "0.2.0";
 const FEEDS = ["top", "new", "best", "show", "ask", "jobs"];
 
 function parseArgs(args: string[]): { command: string; flags: Record<string, string>; positional: string[] } {
@@ -287,6 +288,7 @@ export async function runCli(args: string[]): Promise<void> {
     case "reply": return cmdComment(flags); // alias
     case "upvote": return cmdUpvote(flags);
     case "user": return cmdUser(flags, positional);
+    case "version": case "--version": case "-v": console.log(`hakr ${VERSION}`); return;
     case "help": case "--help": case "-h": return showHelp();
     default:
       console.error(`Unknown command: ${command}`);

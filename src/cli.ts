@@ -4,7 +4,7 @@ import { getStoredCookie, getStoredUsername, storeCookie, clearSession } from ".
 import { stripHtml, timeAgo, extractDomain } from "./ui/utils.ts";
 import type { FeedType } from "./ui/types.ts";
 
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 const FEEDS = ["top", "new", "best", "show", "ask", "jobs"];
 
 function parseArgs(args: string[]): { command: string; flags: Record<string, string>; positional: string[] } {

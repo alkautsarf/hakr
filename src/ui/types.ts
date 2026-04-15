@@ -79,6 +79,7 @@ export interface AppStoreHelpers {
   showToast: (message: string, level?: "info" | "error" | "success", durationMs?: number) => void;
   setFeed: (feed: FeedType) => void;
   selectStory: (id: number | null) => void;
+  openStory: (id: number) => void;
   setHighlightedStory: (index: number) => void;
   setHighlightedComment: (index: number) => void;
   setLoading: (v: boolean) => void;

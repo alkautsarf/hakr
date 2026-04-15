@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.2] - 2026-04-15
+
+### Fixed
+
+- Search overlay now loads comments when opening a story (was only showing header)
+- Re-fetch story item when opening comments to get latest kids array (fixes stale cache)
+- Add 10s fetch timeout to prevent hung requests
+
+### Changed
+
+- Unified story opening via `openStory` helper — all paths (Enter, search, refresh) use the same comment loading logic
+
 ## [0.2.1] - 2026-04-15
 
 ### Fixed
@@ -43,6 +55,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Full CLI mode: `hakr stories`, `hakr comments`, `hakr post`, `hakr comment`, `hakr upvote`, `hakr status`, `hakr whoami`, `hakr user`
 - Vim-style keybindings (j/k, gg/G, h/l, Ctrl+D/U)
 
+[0.2.2]: https://github.com/alkautsarf/hakr/releases/tag/v0.2.2
 [0.2.1]: https://github.com/alkautsarf/hakr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/alkautsarf/hakr/releases/tag/v0.2.0
 [0.1.0]: https://github.com/alkautsarf/hakr/releases/tag/v0.1.0

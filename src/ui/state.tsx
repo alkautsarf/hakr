@@ -1,6 +1,7 @@
 import { createContext, useContext } from "solid-js";
 import { createStore, type SetStoreFunction } from "solid-js/store";
 import type { AppStore, AppStoreHelpers, AppMode, FocusZone, FeedType, OverlayType } from "./types.ts";
+import { fetchItem, fetchCommentTree } from "../api/read.ts";
 
 const INITIAL_STORE: AppStore = {
   feed: "top",
@@ -70,6 +71,23 @@ export function createAppStore(): [AppStore, SetStoreFunction<AppStore>, AppStor
       if (id !== null) {
         setStore("focusZone", "comments");
       }
+    },
+    openStory(id: number) {
+      setStore("selectedStoryId", id);
+      setStore("highlightedCommentIndex", 0);
+      setStore("focusZone", "comments");
+      setStore("loadingComments", true);
+      setStore("comments", []);
+      fetchItem(id).then((fresh) => {
+        if (!fresh?.kids?.length) {
+          setStore("loadingComments", false);
+          return;
+        }
+        fetchCommentTree(fresh.kids).then((comments) => {
+          setStore("comments", comments);
+          setStore("loadingComments", false);
+        }).catch(() => setStore("loadingComments", false));
+      }).catch(() => setStore("loadingComments", false));
     },
     setHighlightedStory(index: number) {
       setStore("highlightedStoryIndex", index);

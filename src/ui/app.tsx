@@ -3,7 +3,7 @@ import { useAppStore } from "./state.tsx";
 import { useTheme } from "./theme.tsx";
 import { useAppKeyboard } from "./keys.ts";
 import { Layout } from "./layout.tsx";
-import { fetchStoryIds, fetchStories, fetchCommentTree, fetchUser } from "../api/read.ts";
+import { fetchStoryIds, fetchStories, fetchItem, fetchCommentTree, fetchUser } from "../api/read.ts";
 import { upvote as apiUpvote } from "../api/write.ts";
 import { getStoredCookie, getStoredUsername } from "../auth/session.ts";
 import { filterVisibleComments } from "./utils.ts";
@@ -39,6 +39,7 @@ export function App(props: AppProps) {
     loadFeed(feed);
   });
 
+
   async function loadFeed(feed: FeedType) {
     helpers.setLoading(true);
     try {
@@ -60,16 +61,16 @@ export function App(props: AppProps) {
 
   async function loadComments(storyId: number) {
     helpers.setLoadingComments(true);
+    setStore("comments", []);
     try {
-      const story = store.stories[storyId];
-      if (!story?.kids?.length) {
-        setStore("comments", []);
+      const fresh = await fetchItem(storyId);
+      if (!fresh?.kids?.length) {
         return;
       }
-      const comments = await fetchCommentTree(story.kids);
+      const comments = await fetchCommentTree(fresh.kids);
       setStore("comments", comments);
     } catch (e: any) {
-      helpers.showToast(`Failed to load comments: ${e.message}`, "error");
+      helpers.showToast(`Comments error: ${e.message}`, "error");
     } finally {
       helpers.setLoadingComments(false);
     }
@@ -139,8 +140,7 @@ export function App(props: AppProps) {
     onOpenStory() {
       const storyId = store.loadedStoryIds[store.highlightedStoryIndex];
       if (!storyId) return;
-      helpers.selectStory(storyId);
-      loadComments(storyId);
+      helpers.openStory(storyId);
     },
 
     onBackToStories() {

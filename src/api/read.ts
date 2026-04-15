@@ -12,7 +12,7 @@ const FEED_ENDPOINTS: Record<FeedType, string> = {
 };
 
 async function fetchJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}/${path}.json`);
+  const res = await fetch(`${BASE}/${path}.json`, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(`HN API error: ${res.status}`);
   return res.json() as Promise<T>;
 }

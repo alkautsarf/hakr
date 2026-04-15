@@ -22,20 +22,24 @@ export function SearchOverlay() {
   const width = createMemo(() => Math.min(70, Math.max(40, Math.floor(dims().width * 0.6))));
   const height = createMemo(() => Math.min(20, Math.max(10, Math.floor(dims().height * 0.5))));
 
+  function selectItem() {
+    const items = filtered();
+    const item = items[selectedIdx()];
+    if (item) {
+      const idx = store.loadedStoryIds.indexOf(item.id);
+      if (idx >= 0) helpers.setHighlightedStory(idx);
+      helpers.setOverlay(null);
+      helpers.openStory(item.id);
+    }
+  }
+
   function handleKeyDown(evt: any) {
     if (evt.name === "escape") {
       helpers.setOverlay(null);
       return;
     }
     if (evt.name === "return") {
-      const items = filtered();
-      const item = items[selectedIdx()];
-      if (item) {
-        helpers.setOverlay(null);
-        const idx = store.loadedStoryIds.indexOf(item.id);
-        if (idx >= 0) helpers.setHighlightedStory(idx);
-        helpers.selectStory(item.id);
-      }
+      selectItem();
       return;
     }
     if (evt.name === "down" || (evt.ctrl && evt.name === "n")) {
@@ -80,6 +84,7 @@ export function SearchOverlay() {
             setSelectedIdx(0);
           }}
           onKeyDown={handleKeyDown}
+          onSubmit={() => selectItem()}
         />
         <box height={1} />
         <scrollbox flexGrow={1} viewportCulling>

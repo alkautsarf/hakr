@@ -6,6 +6,7 @@ import type { CommentItem as CommentItemType } from "../types.ts";
 interface CommentItemProps {
   comment: CommentItemType;
   selected: boolean;
+  upvoted: boolean;
 }
 
 export function CommentItemRow(props: CommentItemProps) {
@@ -39,6 +40,9 @@ export function CommentItemRow(props: CommentItemProps) {
           <text fg={threadColor()}>
             {threadBar()}
           </text>
+        </Show>
+        <Show when={props.upvoted}>
+          <text fg={theme.accent}>{"▲ "}</text>
         </Show>
         <text fg={props.selected ? theme.accent : theme.link} attributes={1}>
           {props.comment.by}

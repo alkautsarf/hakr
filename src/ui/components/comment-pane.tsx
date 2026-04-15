@@ -78,6 +78,7 @@ export function CommentPane(props: CommentPaneProps) {
                       <CommentItemRow
                         comment={comment}
                         selected={idx() === store.highlightedCommentIndex}
+                        upvoted={store.upvotedIds.has(comment.id)}
                       />
                     </box>
                   )}

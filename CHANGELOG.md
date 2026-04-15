@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.1] - 2026-04-15
+
+### Fixed
+
+- Add visual upvote indicator (▲) on comments when upvoted
+
 ## [0.2.0] - 2026-04-15
 
 ### Added
@@ -37,5 +43,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - Full CLI mode: `hakr stories`, `hakr comments`, `hakr post`, `hakr comment`, `hakr upvote`, `hakr status`, `hakr whoami`, `hakr user`
 - Vim-style keybindings (j/k, gg/G, h/l, Ctrl+D/U)
 
+[0.2.1]: https://github.com/alkautsarf/hakr/releases/tag/v0.2.1
 [0.2.0]: https://github.com/alkautsarf/hakr/releases/tag/v0.2.0
 [0.1.0]: https://github.com/alkautsarf/hakr/releases/tag/v0.1.0

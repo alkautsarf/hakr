@@ -11,8 +11,10 @@ const FEED_ENDPOINTS: Record<FeedType, string> = {
   jobs: "jobstories",
 };
 
+const READ_TIMEOUT = 15000;
+
 async function fetchJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}/${path}.json`, { signal: AbortSignal.timeout(10000) });
+  const res = await fetch(`${BASE}/${path}.json`, { signal: AbortSignal.timeout(READ_TIMEOUT) });
   if (!res.ok) throw new Error(`HN API error: ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -41,7 +43,13 @@ export async function fetchItem(id: number): Promise<StoryItem | null> {
 }
 
 export async function fetchStories(ids: number[]): Promise<StoryItem[]> {
-  const results = await Promise.all(ids.map(fetchItem));
+  // Fetch in batches of 10 to avoid connection pool exhaustion
+  const results: (StoryItem | null)[] = [];
+  for (let i = 0; i < ids.length; i += 10) {
+    const batch = ids.slice(i, i + 10);
+    const batchResults = await Promise.all(batch.map((id) => fetchItem(id).catch(() => null)));
+    results.push(...batchResults);
+  }
   return results.filter((s): s is StoryItem => s !== null);
 }
 
@@ -51,15 +59,37 @@ export async function fetchCommentTree(
 ): Promise<CommentItem[]> {
   const flat: CommentItem[] = [];
 
+  let active = 0;
+  const queue: (() => void)[] = [];
+  const MAX_CONCURRENT = 10;
+
+  function acquire(): Promise<void> {
+    if (active < MAX_CONCURRENT) {
+      active++;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => queue.push(resolve));
+  }
+
+  function release() {
+    const next = queue.shift();
+    if (next) next();
+    else active--;
+  }
+
   async function fetchOne(id: number, depth: number): Promise<void> {
     if (depth > maxDepth) return;
 
+    await acquire();
     let item: any;
     try {
       item = await fetchJSON<any>(`item/${id}`);
     } catch {
+      release();
       return;
     }
+    release();
+
     if (!item || item.deleted || item.type !== "comment") return;
 
     const comment: CommentItem = {
@@ -77,13 +107,13 @@ export async function fetchCommentTree(
 
     flat.push(comment);
 
-    // Fetch children in parallel
+    // Fetch children with concurrency control
     if (item.kids?.length) {
       await Promise.all(item.kids.map((kid: number) => fetchOne(kid, depth + 1)));
     }
   }
 
-  // Fetch all root-level comments in parallel
+  // Fetch all root-level comments (concurrency-limited)
   await Promise.all(rootKids.map((id) => fetchOne(id, 0)));
 
   // Sort by tree order: group by root thread, preserve depth-first order
@@ -104,6 +134,24 @@ export async function fetchCommentTree(
 
   for (const rootId of rootKids) addInOrder(rootId);
   return ordered;
+}
+
+export interface AlgoliaHit {
+  objectID: string;
+  title: string;
+  url?: string;
+  author: string;
+  points: number;
+  num_comments: number;
+  created_at_i: number;
+}
+
+export async function searchStories(query: string): Promise<AlgoliaHit[]> {
+  const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=30`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) throw new Error(`Algolia API error: ${res.status}`);
+  const data = (await res.json()) as { hits?: AlgoliaHit[] };
+  return data.hits ?? [];
 }
 
 export async function fetchUser(id: string): Promise<HNUser | null> {

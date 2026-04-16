@@ -5,7 +5,8 @@ if (args.length > 0) {
   const { runCli } = await import("./cli.ts");
   await runCli(args);
 } else {
-  // TUI mode
+  // TUI mode — suppress unhandled rejections to prevent OpenTUI Console panel from stealing focus
+  process.on("unhandledRejection", () => {});
   const { render } = await import("@opentui/solid");
   const { createCliRenderer } = await import("@opentui/core");
   const { createAppStore, AppStoreProvider } = await import("./ui/state.tsx");

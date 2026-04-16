@@ -4,7 +4,7 @@ import { useAppStore } from "../state.tsx";
 import { useTheme } from "../theme.tsx";
 import { CommentItemRow } from "./comment-item.tsx";
 import { ReplyInput } from "./reply-input.tsx";
-import { timeAgo, extractDomain, filterVisibleComments } from "../utils.ts";
+import { timeAgo, extractDomain, stripHtml, filterVisibleComments } from "../utils.ts";
 
 interface CommentPaneProps {
   scrollRef?: (el: any) => void;
@@ -22,6 +22,27 @@ export function CommentPane(props: CommentPaneProps) {
 
   const visibleComments = createMemo(() => {
     return filterVisibleComments(store.comments);
+  });
+
+  const replyCountMap = createMemo(() => {
+    const counts = new Map<number, number>();
+    const comments = store.comments;
+    for (let i = 0; i < comments.length; i++) {
+      const c = comments[i]!;
+      let count = 0;
+      for (let j = i + 1; j < comments.length; j++) {
+        if (comments[j]!.depth <= c.depth) break;
+        count++;
+      }
+      counts.set(c.id, count);
+    }
+    return counts;
+  });
+
+  const storyBody = createMemo(() => {
+    const s = story();
+    if (!s?.text) return null;
+    return stripHtml(s.text);
   });
 
   return (
@@ -52,6 +73,13 @@ export function CommentPane(props: CommentPaneProps) {
                   " · " + s().descendants + " comments"}
               </text>
             </box>
+            <Show when={store.commentFilter}>
+              <box height={1} flexShrink={0} paddingX={1}>
+                <text fg={theme.warning}>
+                  {`/${store.commentFilter}  ${store.commentFilterMatchIndex + 1}/${store.commentFilterMatchIds.length} matches  (n/N:next/prev  Esc:clear)`}
+                </text>
+              </box>
+            </Show>
             <box height={1} flexShrink={0}>
               <text fg={theme.fgFaint}>
                 {"─".repeat(dims().width)}
@@ -72,6 +100,18 @@ export function CommentPane(props: CommentPaneProps) {
                 flexGrow={1}
                 stickyScroll={false}
               >
+                <Show when={storyBody()}>
+                  <box id="story-body" paddingX={1}>
+                    <text fg={theme.fg}>
+                      {storyBody()}
+                    </text>
+                  </box>
+                  <box height={1}>
+                    <text fg={theme.fgFaint}>
+                      {"▁".repeat(70)}
+                    </text>
+                  </box>
+                </Show>
                 <For each={visibleComments()}>
                   {(comment, idx) => (
                     <box id={`comment-${comment.id}`}>
@@ -79,6 +119,7 @@ export function CommentPane(props: CommentPaneProps) {
                         comment={comment}
                         selected={idx() === store.highlightedCommentIndex}
                         upvoted={store.upvotedIds.has(comment.id)}
+                        totalReplies={replyCountMap().get(comment.id) ?? 0}
                       />
                     </box>
                   )}

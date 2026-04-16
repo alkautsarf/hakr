@@ -24,7 +24,7 @@ export function StoryList(props: StoryListProps) {
         fallback={
           <box flexGrow={1} justifyContent="center" alignItems="center">
             <text fg={theme.fgMuted}>
-              {store.loading ? "Loading stories…" : "No stories"}
+              {store.loading ? "Loading stories…" : "No stories — press R to refresh"}
             </text>
           </box>
         }
@@ -47,6 +47,11 @@ export function StoryList(props: StoryListProps) {
               </box>
             )}
           </For>
+          <Show when={store.loadingMoreStories}>
+            <box paddingX={1} height={1}>
+              <text fg={theme.fgMuted}>{"Loading more stories…"}</text>
+            </box>
+          </Show>
         </scrollbox>
       </Show>
     </box>

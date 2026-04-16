@@ -39,7 +39,7 @@ export interface HNUser {
 }
 
 export type OverlayType =
-  | { type: "search" }
+  | { type: "search"; context: "stories" | "comments" }
   | { type: "submit" }
   | { type: "login" }
   | { type: "help" }
@@ -65,6 +65,11 @@ export interface AppStore {
   toast: ToastState | null;
   loading: boolean;
   loadingComments: boolean;
+  allStoryIds: number[];
+  loadingMoreStories: boolean;
+  commentFilter: string | null;
+  commentFilterMatchIds: number[];
+  commentFilterMatchIndex: number;
   loggedInUser: string | null;
   userKarma: number | null;
   upvotedIds: Set<number>;
@@ -88,4 +93,7 @@ export interface AppStoreHelpers {
   setUserKarma: (karma: number | null) => void;
   setReplyTarget: (id: number | null) => void;
   toggleUpvoted: (id: number) => void;
+  setCommentFilter: (filter: string | null) => void;
+  nextCommentMatch: () => void;
+  prevCommentMatch: () => void;
 }

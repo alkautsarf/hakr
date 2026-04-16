@@ -24,7 +24,7 @@ export interface Theme {
 
 export const hnTheme: Theme = {
   bg: undefined,
-  bgSelected: "#2a2a2a",
+  bgSelected: "#2a2a3a",
   bgOverlay: "#1a1a1a",
   fg: "#c9d1d9",
   fgMuted: "#8b949e",

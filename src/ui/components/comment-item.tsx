@@ -7,25 +7,21 @@ interface CommentItemProps {
   comment: CommentItemType;
   selected: boolean;
   upvoted: boolean;
+  totalReplies: number;
 }
 
 export function CommentItemRow(props: CommentItemProps) {
   const theme = useTheme();
 
-  const threadColor = createMemo(
+  const depthColor = createMemo(
     () => theme.threadColors[props.comment.depth % theme.threadColors.length] ?? theme.fgFaint,
   );
 
   const bodyText = createMemo(() => stripHtml(props.comment.text));
 
-  const threadBar = createMemo(() => {
+  const indent = createMemo(() => {
     if (props.comment.depth === 0) return "";
-    let bar = "";
-    for (let i = 0; i < props.comment.depth; i++) {
-      const color = theme.threadColors[i % theme.threadColors.length];
-      bar += "┃ ";
-    }
-    return bar;
+    return " ".repeat(props.comment.depth);
   });
 
   return (
@@ -34,11 +30,11 @@ export function CommentItemRow(props: CommentItemProps) {
       backgroundColor={props.selected ? theme.bgSelected : undefined}
       paddingX={1}
     >
-      {/* Header: thread bars + author + time */}
+      {/* Header: indent + author + time */}
       <box flexDirection="row">
         <Show when={props.comment.depth > 0}>
-          <text fg={threadColor()}>
-            {threadBar()}
+          <text fg={depthColor()}>
+            {indent()}
           </text>
         </Show>
         <Show when={props.upvoted}>
@@ -48,24 +44,42 @@ export function CommentItemRow(props: CommentItemProps) {
           {props.comment.by}
         </text>
         <text fg={theme.fgFaint}>
-          {"  · " + timeAgo(props.comment.time) +
-            (props.comment.collapsed
-              ? `  [+${props.comment.kids?.length ?? 0} replies]`
-              : "")}
+          {"  · " + timeAgo(props.comment.time)}
         </text>
       </box>
-      {/* Body — only show if not collapsed */}
-      <Show when={!props.comment.collapsed}>
+      {/* Body with left border for nested comments */}
+      <box flexDirection="row">
+        <Show when={props.comment.depth > 0}>
+          <text fg={depthColor()}>
+            {indent() + "▎"}
+          </text>
+        </Show>
+        <text fg={theme.fg}>
+          {bodyText()}
+        </text>
+      </box>
+      {/* Collapsed replies indicator */}
+      <Show when={props.comment.collapsed && props.totalReplies > 0}>
         <box flexDirection="row">
           <Show when={props.comment.depth > 0}>
-            <text fg={threadColor()}>
-              {threadBar()}
+            <text fg={depthColor()}>
+              {indent()}
             </text>
           </Show>
-          <text fg={theme.fg}>
-            {bodyText()}
+          <text fg={theme.fgFaint}>
+            {`\n ↩ ${props.totalReplies} ${props.totalReplies === 1 ? "reply" : "replies"} hidden`}
           </text>
         </box>
+      </Show>
+      {/* Separator after top-level comments */}
+      <Show when={props.comment.depth === 0}>
+        <box height={1}>
+          <text fg={theme.fgFaint}>
+            {"▁".repeat(70)}
+          </text>
+        </box>
+      </Show>
+      <Show when={props.comment.depth > 0}>
         <box height={1} />
       </Show>
     </box>

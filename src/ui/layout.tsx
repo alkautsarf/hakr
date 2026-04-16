@@ -10,6 +10,7 @@ import { HelpOverlay } from "./overlays/help.tsx";
 import { SearchOverlay } from "./overlays/search.tsx";
 import { LoginOverlay } from "./overlays/login.tsx";
 import { SubmitOverlay } from "./overlays/submit.tsx";
+import { UserOverlay } from "./overlays/user.tsx";
 
 interface LayoutProps {
   storyListScrollRef: (el: any) => void;
@@ -70,6 +71,9 @@ export function Layout(props: LayoutProps) {
       </Show>
       <Show when={store.overlay?.type === "submit"}>
         <SubmitOverlay />
+      </Show>
+      <Show when={store.overlay?.type === "user"}>
+        <UserOverlay />
       </Show>
     </box>
   );

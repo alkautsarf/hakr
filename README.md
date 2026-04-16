@@ -72,22 +72,25 @@ hakr user pg                         # View any user's profile
 | `r` | Reply to highlighted comment |
 | `c` | Comment on story (top-level) |
 | `o` | Open URL in browser |
+| `p` / `P` | View user profile / own profile |
 | `s` | Submit new story |
 | `R` | Refresh feed + comments |
 | `L` | Login / Logout |
-| `/` | Search stories |
+| `/` | Search (stories pane → HN-wide, comments pane → local filter) |
+| `n` / `N` | Next / prev comment match |
 | `?` | Help overlay |
 | `q` | Quit pane / app |
 
 ## Features
 
-- **Browse** — Top, New, Best, Show HN, Ask HN, Jobs feeds
-- **Read** — Threaded comments with colored depth indicators, collapse/expand
+- **Browse** — Top, New, Best, Show HN, Ask HN, Jobs feeds with infinite scroll
+- **Read** — Threaded comments collapsed by default, expand what interests you
 - **Post** — Submit link or text stories
 - **Comment** — Top-level comments and threaded replies, inline
 - **Upvote** — Vote on stories and comments with optimistic UI
-- **Login** — HN authentication with password masking, session cached in macOS Keychain
-- **Search** — Filter stories with fuzzy matching
+- **Search** — HN-wide Algolia search from stories pane, local comment filter from comments pane
+- **Profile** — View any user's profile (karma, join date, about) with `p`
+- **Login** — HN authentication with password masking, session cached in macOS Keychain (file fallback for Linux/Windows)
 - **CLI** — Full programmatic access for scripting and automation
 
 ## Configuration

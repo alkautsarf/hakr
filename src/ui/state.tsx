@@ -2,6 +2,7 @@ import { createContext, useContext } from "solid-js";
 import { createStore, type SetStoreFunction } from "solid-js/store";
 import type { AppStore, AppStoreHelpers, AppMode, FocusZone, FeedType, OverlayType } from "./types.ts";
 import { fetchItem, fetchCommentTree } from "../api/read.ts";
+import { filterVisibleComments } from "./utils.ts";
 
 const INITIAL_STORE: AppStore = {
   feed: "top",
@@ -17,6 +18,11 @@ const INITIAL_STORE: AppStore = {
   toast: null,
   loading: true,
   loadingComments: false,
+  allStoryIds: [],
+  loadingMoreStories: false,
+  commentFilter: null,
+  commentFilterMatchIds: [],
+  commentFilterMatchIndex: 0,
   loggedInUser: null,
   userKarma: null,
   upvotedIds: new Set(),
@@ -34,6 +40,16 @@ const StoreContext = createContext<AppStoreContext>();
 
 export function createAppStore(): [AppStore, SetStoreFunction<AppStore>, AppStoreHelpers] {
   const [store, setStore] = createStore<AppStore>({ ...INITIAL_STORE });
+
+  function jumpCommentMatch(dir: 1 | -1) {
+    const ids = store.commentFilterMatchIds;
+    if (ids.length === 0) return;
+    const next = (store.commentFilterMatchIndex + dir + ids.length) % ids.length;
+    setStore("commentFilterMatchIndex", next);
+    const visible = filterVisibleComments(store.comments);
+    const idx = visible.findIndex((c) => c.id === ids[next]);
+    if (idx >= 0) setStore("highlightedCommentIndex", idx);
+  }
 
   const helpers: AppStoreHelpers = {
     setMode(mode: AppMode) {
@@ -64,10 +80,18 @@ export function createAppStore(): [AppStore, SetStoreFunction<AppStore>, AppStor
       setStore("highlightedStoryIndex", 0);
       setStore("selectedStoryId", null);
       setStore("comments", []);
+      setStore("allStoryIds", []);
+      setStore("loadingMoreStories", false);
+      setStore("commentFilter", null);
+      setStore("commentFilterMatchIds", []);
+      setStore("commentFilterMatchIndex", 0);
     },
     selectStory(id: number | null) {
       setStore("selectedStoryId", id);
       setStore("highlightedCommentIndex", 0);
+      setStore("commentFilter", null);
+      setStore("commentFilterMatchIds", []);
+      setStore("commentFilterMatchIndex", 0);
       if (id !== null) {
         setStore("focusZone", "comments");
       }
@@ -78,12 +102,18 @@ export function createAppStore(): [AppStore, SetStoreFunction<AppStore>, AppStor
       setStore("focusZone", "comments");
       setStore("loadingComments", true);
       setStore("comments", []);
+      setStore("commentFilter", null);
+      setStore("commentFilterMatchIds", []);
+      setStore("commentFilterMatchIndex", 0);
       fetchItem(id).then((fresh) => {
         if (!fresh?.kids?.length) {
           setStore("loadingComments", false);
           return;
         }
         fetchCommentTree(fresh.kids).then((comments) => {
+          for (const c of comments) {
+            if (c.kids?.length) c.collapsed = true;
+          }
           setStore("comments", comments);
           setStore("loadingComments", false);
         }).catch(() => setStore("loadingComments", false));
@@ -115,6 +145,19 @@ export function createAppStore(): [AppStore, SetStoreFunction<AppStore>, AppStor
       if (next.has(id)) next.delete(id);
       else next.add(id);
       setStore("upvotedIds", next);
+    },
+    setCommentFilter(filter: string | null) {
+      setStore("commentFilter", filter);
+      if (filter === null) {
+        setStore("commentFilterMatchIds", []);
+        setStore("commentFilterMatchIndex", 0);
+      }
+    },
+    nextCommentMatch() {
+      jumpCommentMatch(1);
+    },
+    prevCommentMatch() {
+      jumpCommentMatch(-1);
     },
   };
 

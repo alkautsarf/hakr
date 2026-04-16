@@ -24,28 +24,47 @@ export function App(props: AppProps) {
   let commentScrollRef: any = null;
 
   // Restore session on mount + fetch karma
-  onMount(async () => {
-    const user = await getStoredUsername();
-    if (user) {
-      helpers.setLoggedInUser(user);
-      const profile = await fetchUser(user);
-      if (profile) helpers.setUserKarma(profile.karma);
-    }
+  onMount(() => {
+    getStoredUsername().then(async (user) => {
+      if (user) {
+        helpers.setLoggedInUser(user);
+        const profile = await fetchUser(user).catch(() => null);
+        if (profile) helpers.setUserKarma(profile.karma);
+      }
+    }).catch(() => {});
   });
 
   // Load feed reactively (fires on mount + when feed changes)
   createEffect(() => {
     const feed = store.feed;
-    loadFeed(feed);
+    loadFeed(feed).catch(() => {});
   });
 
+  // Auto-scroll to matched comment when filter is applied or n/N changes
+  createEffect(() => {
+    const filter = store.commentFilter;
+    const matchIdx = store.commentFilterMatchIndex;
+    if (filter && store.commentFilterMatchIds.length > 0) {
+      void matchIdx; // track changes from n/N
+      setTimeout(() => scrollCommentIntoView(store.highlightedCommentIndex), 50);
+    }
+  });
+
+  let loadFeedGen = 0;
 
   async function loadFeed(feed: FeedType) {
+    const gen = ++loadFeedGen;
     helpers.setLoading(true);
+    setStore("loadedStoryIds", []);
+    setStore("stories", {});
     try {
       const ids = await fetchStoryIds(feed);
+      if (gen !== loadFeedGen) return; // superseded by newer load
+
+      setStore("allStoryIds", ids);
       const pageIds = ids.slice(0, STORIES_PER_PAGE);
       const stories = await fetchStories(pageIds);
+      if (gen !== loadFeedGen) return;
 
       const storiesMap: Record<number, (typeof stories)[0]> = {};
       for (const s of stories) storiesMap[s.id] = s;
@@ -53,9 +72,34 @@ export function App(props: AppProps) {
       setStore("stories", storiesMap);
       setStore("loadedStoryIds", pageIds.filter((id) => storiesMap[id]));
     } catch (e: any) {
+      if (gen !== loadFeedGen) return;
       helpers.showToast(`Failed to load: ${e.message}`, "error");
     } finally {
-      helpers.setLoading(false);
+      if (gen === loadFeedGen) helpers.setLoading(false);
+    }
+  }
+
+  async function loadMoreStories() {
+    if (store.loadingMoreStories) return;
+    const currentCount = store.loadedStoryIds.length;
+    const allIds = store.allStoryIds;
+    if (currentCount >= allIds.length) return;
+
+    setStore("loadingMoreStories", true);
+    try {
+      const nextBatch = allIds.slice(currentCount, currentCount + STORIES_PER_PAGE);
+      const stories = await fetchStories(nextBatch);
+
+      for (const s of stories) {
+        setStore("stories", s.id, s);
+      }
+
+      const newIds = nextBatch.filter((id) => store.stories[id]);
+      setStore("loadedStoryIds", [...store.loadedStoryIds, ...newIds]);
+    } catch (e: any) {
+      helpers.showToast(`Failed to load more: ${e.message}`, "error");
+    } finally {
+      setStore("loadingMoreStories", false);
     }
   }
 
@@ -68,6 +112,9 @@ export function App(props: AppProps) {
         return;
       }
       const comments = await fetchCommentTree(fresh.kids);
+      for (const c of comments) {
+        if (c.kids?.length) c.collapsed = true;
+      }
       setStore("comments", comments);
     } catch (e: any) {
       helpers.showToast(`Comments error: ${e.message}`, "error");
@@ -104,11 +151,17 @@ export function App(props: AppProps) {
       const next = Math.max(0, Math.min(max, store.highlightedStoryIndex + dir));
       helpers.setHighlightedStory(next);
       scrollStoryIntoView(next);
+      if (next >= store.loadedStoryIds.length - 5) loadMoreStories().catch(() => {});
     },
 
     onNavigateComments(dir) {
       const visible = getVisibleComments();
       const max = visible.length - 1;
+      // When at top and pressing up, scroll to story body top
+      if (dir === -1 && store.highlightedCommentIndex === 0 && commentScrollRef) {
+        commentScrollRef.scrollTop = 0;
+        return;
+      }
       const next = Math.max(0, Math.min(max, store.highlightedCommentIndex + dir));
       helpers.setHighlightedComment(next);
       scrollCommentIntoView(next);
@@ -123,11 +176,12 @@ export function App(props: AppProps) {
       const last = store.loadedStoryIds.length - 1;
       helpers.setHighlightedStory(last);
       scrollStoryIntoView(last);
+      loadMoreStories().catch(() => {});
     },
 
     onJumpCommentsTop() {
       helpers.setHighlightedComment(0);
-      scrollCommentIntoView(0);
+      if (commentScrollRef) commentScrollRef.scrollTop = 0;
     },
 
     onJumpCommentsBottom() {
@@ -161,10 +215,9 @@ export function App(props: AppProps) {
       }
 
       helpers.toggleUpvoted(id);
-      // Fire and forget — optimistic UI
       getStoredCookie().then((cookie) => {
-        if (cookie) apiUpvote(cookie, id);
-      });
+        if (cookie) apiUpvote(cookie, id).catch(() => {});
+      }).catch(() => {});
     },
 
     onReply() {
@@ -239,6 +292,7 @@ export function App(props: AppProps) {
         const next = Math.min(max, store.highlightedStoryIndex + step);
         helpers.setHighlightedStory(next);
         scrollStoryIntoView(next);
+        if (next >= store.loadedStoryIds.length - 5) loadMoreStories().catch(() => {});
       } else if (store.focusZone === "comments") {
         const step = 10;
         const visible = getVisibleComments();
@@ -265,10 +319,39 @@ export function App(props: AppProps) {
 
     onRefresh() {
       helpers.showToast("Refreshing…", "info", 2000);
-      loadFeed(store.feed);
+      loadFeed(store.feed).catch(() => {});
       if (store.selectedStoryId) {
-        loadComments(store.selectedStoryId);
+        loadComments(store.selectedStoryId).catch(() => {});
       }
+    },
+
+    onScrollToCommentMatch() {
+      scrollCommentIntoView(store.highlightedCommentIndex);
+    },
+
+    onViewProfile() {
+      let userId: string | null = null;
+      if (store.focusZone === "stories") {
+        const storyId = store.loadedStoryIds[store.highlightedStoryIndex];
+        if (storyId) userId = store.stories[storyId]?.by ?? null;
+      } else if (store.focusZone === "comments") {
+        const visible = getVisibleComments();
+        const comment = visible[store.highlightedCommentIndex];
+        if (comment) userId = comment.by;
+      }
+      if (!userId) {
+        if (store.loggedInUser) userId = store.loggedInUser;
+        else return;
+      }
+      helpers.setOverlay({ type: "user", userId });
+    },
+
+    onViewOwnProfile() {
+      if (!store.loggedInUser) {
+        helpers.showToast("Login first (press L)", "error");
+        return;
+      }
+      helpers.setOverlay({ type: "user", userId: store.loggedInUser });
     },
   });
 

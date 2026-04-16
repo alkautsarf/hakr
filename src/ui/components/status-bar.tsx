@@ -33,9 +33,10 @@ export function StatusBar() {
 
     switch (store.focusZone) {
       case "stories":
-        return "j/k:nav  enter:open  u:upvote  o:url  /:search  s:submit  R:refresh  ?:help";
+        return "j/k:nav  enter:open  u:upvote  o:url  p:profile  /:search  s:submit  R:refresh  ?:help";
       case "comments":
-        return "j/k:nav  r:reply  u:upvote  l:collapse  R:refresh  h:back  ?:help";
+        if (store.commentFilter) return "n/N:next/prev match  Esc:clear filter  j/k:nav  /:search  ?:help";
+        return "j/k:nav  r:reply  u:upvote  p:profile  l:collapse  /:search  R:refresh  h:back  ?:help";
       case "input":
         return "esc:cancel  ctrl+enter:submit";
     }

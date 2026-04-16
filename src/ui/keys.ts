@@ -22,6 +22,9 @@ export interface KeyboardActions {
   onPageDown: () => void;
   onPageUp: () => void;
   onRefresh: () => void;
+  onScrollToCommentMatch?: () => void;
+  onViewProfile?: () => void;
+  onViewOwnProfile?: () => void;
 }
 
 const FOCUS_ORDER: FocusZone[] = ["stories", "comments", "input"];
@@ -61,6 +64,10 @@ export function useAppKeyboard(actions: KeyboardActions) {
     }
     if (store.focusZone === "input") {
       helpers.setFocusZone("comments");
+      return;
+    }
+    if (store.commentFilter && store.focusZone === "comments") {
+      helpers.setCommentFilter(null);
       return;
     }
     if (store.focusZone === "comments") {
@@ -105,7 +112,8 @@ export function useAppKeyboard(actions: KeyboardActions) {
       return;
     }
     if (evt.name === "/" && !evt.ctrl) {
-      helpers.setOverlay({ type: "search" });
+      const ctx = store.focusZone === "comments" && store.selectedStoryId ? "comments" : "stories";
+      helpers.setOverlay({ type: "search", context: ctx });
       return;
     }
 
@@ -210,6 +218,22 @@ export function useAppKeyboard(actions: KeyboardActions) {
       return;
     }
 
+    // n/N — next/prev comment match
+    if (evt.name === "n" && !evt.shift && !evt.ctrl) {
+      if (store.commentFilter && store.focusZone === "comments") {
+        helpers.nextCommentMatch();
+        actions.onScrollToCommentMatch?.();
+        return;
+      }
+    }
+    if (evt.name === "N" || (evt.shift && evt.name === "n")) {
+      if (store.commentFilter && store.focusZone === "comments") {
+        helpers.prevCommentMatch();
+        actions.onScrollToCommentMatch?.();
+        return;
+      }
+    }
+
     // r — reply to highlighted comment
     if (evt.name === "r" && !evt.shift) {
       actions.onReply();
@@ -225,6 +249,16 @@ export function useAppKeyboard(actions: KeyboardActions) {
     // o — open URL in browser
     if (evt.name === "o") {
       actions.onOpenUrl();
+      return;
+    }
+
+    // p — view user profile (context-aware), P — own profile
+    if (evt.name === "p" || evt.name === "P") {
+      if (evt.shift || evt.name === "P") {
+        actions.onViewOwnProfile?.();
+      } else {
+        actions.onViewProfile?.();
+      }
       return;
     }
 
